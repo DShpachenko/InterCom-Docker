@@ -1,0 +1,5 @@
+.idea
+/apps
+/storage
+/data
+docker-compose.override.yml

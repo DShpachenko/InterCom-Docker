@@ -1,0 +1,57 @@
+FROM phpdockerio/php73-fpm:latest
+
+# Install selected extensions and other stuff
+RUN apt-get update && apt-get -y --no-install-recommends install \
+    git \
+    wget \
+    make \
+    unzip \
+    curl \
+    openssh-client \
+    php7.3-memcached \
+    php7.3-mysql \
+    php7.3-imagick \
+    php7.3-imap \
+    php7.3-intl \
+    php7.3-zip \
+    php7.3-mbstring \
+    php7.3-soap \
+    php7.3-xml \
+    php7.3-bcmath \
+    php7.3-mongodb \
+    php7.3-pgsql \
+    php7.3-xdebug \
+    php7.3-gd \
+    php7.3-dev \
+    libxrender1 \
+    xz-utils \
+    apt-transport-https \
+    nano
+
+RUN addgroup --gid 1000 local
+RUN adduser --uid 1000 --ingroup local --disabled-login local
+RUN sed -i s/www-data/local/g /etc/php/7.3/fpm/pool.d/www.conf
+
+# Установка composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN composer config -g github-oauth.github.com 77506a75c5976a6153b8eca9dd58f5823c5b642d
+
+# Паралельный закгрузчик для композера
+RUN composer global require hirak/prestissimo
+
+# Установка NodeJS, yarn, gulp, bower
+RUN curl -sL https://deb.nodesource.com/setup_12.x -o nodesource_setup.sh && bash nodesource_setup.sh \
+    && curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
+    && echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list \
+    && apt update && apt install --no-install-recommends -y apt-transport-https build-essential python-dev nodejs yarn \
+    && echo 'export PATH="$(yarn global bin):$PATH"' >> /home/local/.bashrc && su local -c "yarn global add gulp#4.0.0 bower"
+
+# Итоговое обновление и очистка
+RUN apt update \
+    && apt upgrade -y \
+    && apt-get autoremove -y \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+WORKDIR /var/www/parser
+

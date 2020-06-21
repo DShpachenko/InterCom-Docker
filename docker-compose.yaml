@@ -1,0 +1,43 @@
+version: '3.1'
+
+services:
+  parser-app:
+    depends_on:
+      - parser-postgres
+    build:
+      context: .
+      dockerfile: ./docker/parser.docker
+    volumes:
+      - ./apps/parser/:/var/www/parser/
+      - ~/.ssh/id_rsa:/root/.ssh/id_rsa
+    networks:
+      interCom-net:
+        ipv4_address: ${DOCKER_PARSER_APP}
+
+  parser-postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: ${PARSER_PGSQL_DB_USERNAME}
+      POSTGRES_PASSWORD: ${PARSER_PGSQL_DB_PASSWORD}
+      POSTGRES_DB: ${PARSER_PGSQL_DB_DATABASE}
+    networks:
+      interCom-net:
+        ipv4_address: ${DOCKER_PARSER_PGSQL}
+
+  parser-nginx:
+    image: nginx:latest
+    depends_on:
+      - parser-app
+    volumes:
+      - ./apps/parser/:/var/www/parser
+      - ./nginx/parser.nginx.conf:/etc/nginx/conf.d/nginx.conf
+    command: [nginx-debug, '-g', 'daemon off;']
+    networks:
+      interCom-net:
+        ipv4_address: ${DOCKER_PARSER_NGINX}
+
+networks:
+  interCom-net:
+    ipam:
+      config:
+        - subnet: ${DOCKER_SUBNET}
